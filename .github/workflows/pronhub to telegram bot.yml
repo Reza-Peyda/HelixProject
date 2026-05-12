@@ -7,14 +7,6 @@ on:
         description: 'URL of the video'
         required: true
         type: string
-      bot_token:
-        description: 'token of telegram bot'
-        required: true
-        type: string
-      chat_id:
-        description: 'id of your chat'
-        required: true
-        type: string
       output_folder:
         description: 'Folder where the video will be saved'
         required: false
