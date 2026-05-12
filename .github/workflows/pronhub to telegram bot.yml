@@ -138,34 +138,35 @@ jobs:
             echo "split_done=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Send files to Telegram
-        run: |
-        
-          BOT_TOKEN: ${{ github.event.inputs.bot_token }}
-          CHAT_ID: ${{ github.event.inputs.chat_id}}
-      
-          FOLDER="${{ github.event.inputs.output_folder }}"
-      
-          for FILE in "$FOLDER"/*; do
-            [ -f "$FILE" ] || continue
-      
-            FILENAME=$(basename "$FILE")
-            FILESIZE=$(du -h "$FILE" | cut -f1)
-      
-            echo "Uploading: $FILENAME ($FILESIZE)"
-      
-            RESPONSE=$(curl -s -X POST \
-              "https://api.telegram.org/bot${BOT_TOKEN}/sendDocument" \
-              -F chat_id="$CHAT_ID" \
-              -F document=@"$FILE" \
-              -F caption="$FILENAME ($FILESIZE)")
-      
-            echo "$RESPONSE"
-      
-            if echo "$RESPONSE" | grep -q '"ok":true'; then
-              echo "Upload successful"
-            else
-              echo "Upload failed"
-              exit 1
-            fi
-          done
+          - name: Send files to Telegram
+            env:
+              BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+              CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+            run: |
+              set -e
+          
+              FOLDER="${{ github.event.inputs.output_folder }}"
+          
+              for FILE in "$FOLDER"/*; do
+                [ -f "$FILE" ] || continue
+          
+                FILENAME=$(basename "$FILE")
+                FILESIZE=$(du -h "$FILE" | cut -f1)
+          
+                echo "Uploading: $FILENAME ($FILESIZE)"
+          
+                RESPONSE=$(curl -s -X POST \
+                  "https://api.telegram.org/bot${BOT_TOKEN}/sendDocument" \
+                  -F chat_id="$CHAT_ID" \
+                  -F document=@"$FILE" \
+                  -F caption="$FILENAME ($FILESIZE)")
+          
+                echo "$RESPONSE"
+          
+                if echo "$RESPONSE" | grep -q '"ok":true'; then
+                  echo "Upload successful"
+                else
+                  echo "Upload failed"
+                  exit 1
+                fi
+              done
