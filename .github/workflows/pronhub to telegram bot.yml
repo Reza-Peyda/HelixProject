@@ -7,6 +7,14 @@ on:
         description: 'URL of the video'
         required: true
         type: string
+      bot_token:
+        description: 'token of telegram bot'
+        required: true
+        type: string
+      chat_id:
+        description: 'id of your chat'
+        required: true
+        type: string
       output_folder:
         description: 'Folder where the video will be saved'
         required: false
@@ -131,11 +139,10 @@ jobs:
           fi
 
       - name: Send files to Telegram
-        env:
-          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          set -e
+        
+          BOT_TOKEN: ${{ github.event.inputs.bot_token }}
+          CHAT_ID: ${{ github.event.inputs.chat_id}}
       
           FOLDER="${{ github.event.inputs.output_folder }}"
       
