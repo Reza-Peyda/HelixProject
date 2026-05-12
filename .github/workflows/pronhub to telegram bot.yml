@@ -149,21 +149,27 @@ jobs:
           FOLDER="${{ github.event.inputs.output_folder }}"
           FILENAME="${{ steps.download.outputs.filename }}"
           SPLIT_DONE="${{ steps.split.outputs.split_done }}"
+          ARCHIVE_BASE="${{ steps.split.outputs.archive_base }}"
       
           cd "$FOLDER"
       
           if [ "$SPLIT_DONE" = "true" ]; then
       
             echo "RAR split detected"
-      
-            ARCHIVE_BASE=$(ls *.part1.rar | sed 's/\.part1\.rar//')
-      
-            echo "Archive base: $ARCHIVE_BASE"
+            echo "Current archive base: $ARCHIVE_BASE"
       
             shopt -s nullglob
             PARTS=( "${ARCHIVE_BASE}.part"*.rar )
       
+            if [ ${#PARTS[@]} -eq 0 ]; then
+              echo "No archive parts found"
+              exit 1
+            fi
+      
+            echo "Found ${#PARTS[@]} parts"
+      
             for FILE in "${PARTS[@]}"; do
+      
               echo "Uploading $FILE"
       
               curl -s -X POST \
@@ -173,11 +179,17 @@ jobs:
                 -F caption="$FILE"
       
               echo "Uploaded $FILE"
+      
             done
       
           else
       
-            echo "Uploading original video"
+            echo "Uploading original video only"
+      
+            if [ ! -f "$FILENAME" ]; then
+              echo "File not found: $FILENAME"
+              exit 1
+            fi
       
             curl -s -X POST \
               "https://api.telegram.org/bot${BOT_TOKEN}/sendDocument" \
