@@ -1,4 +1,4 @@
-name: Pornhub Download
+name: Pornhub to Telegram Bot Download
 
 on:
   workflow_dispatch:
