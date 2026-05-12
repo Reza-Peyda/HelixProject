@@ -139,7 +139,7 @@ jobs:
           git commit -m "Add downloaded video(s)"
           git push
 
-      - name: Send files to Telegram
+      - name: Upload current processed file(s) to Telegram
         env:
           BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -147,27 +147,44 @@ jobs:
           set -e
       
           FOLDER="${{ github.event.inputs.output_folder }}"
+          FILENAME="${{ steps.download.outputs.filename }}"
+          SPLIT_DONE="${{ steps.split.outputs.split_done }}"
       
-          for FILE in "$FOLDER"/*; do
-            [ -f "$FILE" ] || continue
+          cd "$FOLDER"
       
-            FILENAME=$(basename "$FILE")
-            FILESIZE=$(du -h "$FILE" | cut -f1)
+          if [ "$SPLIT_DONE" = "true" ]; then
       
-            echo "Uploading: $FILENAME ($FILESIZE)"
+            echo "RAR split detected"
       
-            RESPONSE=$(curl -s -X POST \
+            ARCHIVE_BASE=$(ls *.part1.rar | sed 's/\.part1\.rar//')
+      
+            echo "Archive base: $ARCHIVE_BASE"
+      
+            shopt -s nullglob
+            PARTS=( "${ARCHIVE_BASE}.part"*.rar )
+      
+            for FILE in "${PARTS[@]}"; do
+              echo "Uploading $FILE"
+      
+              curl -s -X POST \
+                "https://api.telegram.org/bot${BOT_TOKEN}/sendDocument" \
+                -F chat_id="$CHAT_ID" \
+                -F document=@"$FILE" \
+                -F caption="$FILE"
+      
+              echo "Uploaded $FILE"
+            done
+      
+          else
+      
+            echo "Uploading original video"
+      
+            curl -s -X POST \
               "https://api.telegram.org/bot${BOT_TOKEN}/sendDocument" \
               -F chat_id="$CHAT_ID" \
-              -F document=@"$FILE" \
-              -F caption="$FILENAME ($FILESIZE)")
+              -F document=@"$FILENAME" \
+              -F caption="$FILENAME"
       
-            echo "$RESPONSE"
+            echo "Uploaded $FILENAME"
       
-            if echo "$RESPONSE" | grep -q '"ok":true'; then
-              echo "Upload successful"
-            else
-              echo "Upload failed"
-              exit 1
-            fi
-          done
+          fi
