@@ -1,0 +1,61 @@
+name: Upload Specific RAR Set To Telegram
+
+on:
+  workflow_dispatch:
+    inputs:
+      folder:
+        description: 'Directory containing RAR files'
+        required: true
+        default: 'downloads'
+        type: string
+
+      archive_base:
+        description: 'Archive base name (example: video_05_ac6f22)'
+        required: true
+        type: string
+
+env:
+  BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Upload matching archive parts
+        run: |
+          set -e
+
+          FOLDER="${{ github.event.inputs.folder }}"
+          BASE="${{ github.event.inputs.archive_base }}"
+
+          echo "Searching for:"
+          echo "${BASE}.part*.rar"
+
+          shopt -s nullglob
+
+          FILES=( "$FOLDER/${BASE}.part"*.rar )
+
+          if [ ${#FILES[@]} -eq 0 ]; then
+            echo "No matching files found."
+            exit 1
+          fi
+
+          echo "Found ${#FILES[@]} part(s)"
+
+          for FILE in "${FILES[@]}"; do
+            NAME=$(basename "$FILE")
+
+            echo "Uploading $NAME"
+
+            curl -s -X POST \
+              "https://api.telegram.org/bot${BOT_TOKEN}/sendDocument" \
+              -F chat_id="$CHAT_ID" \
+              -F document=@"$FILE" \
+              -F caption="$NAME"
+
+            echo "Uploaded $NAME"
+          done
